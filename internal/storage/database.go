@@ -16,3 +16,11 @@ func ConnectDB() (*sql.DB, error) {
     }
     return db, nil
 }
+
+func DeleteActor(db *sql.DB, actorID int) error {
+    _, err := db.Exec("DELETE FROM actors WHERE id = ?", actorID)
+    if err != nil {
+        return err
+    }
+    return nil
+}

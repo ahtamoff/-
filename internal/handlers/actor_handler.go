@@ -16,9 +16,6 @@ type Actor struct {
 	Birthdate string `json:"birthdate"`
 }
 
-func ActorHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "actors handler done")
-}
 
 func AddActorHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
 	var actor Actor
@@ -41,6 +38,7 @@ func AddActorHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateActorHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
+	
 	// Получаем ID актера из URL-адреса
 	urlPath := r.URL.Path
 	idStr := strings.TrimPrefix(urlPath, "/actors/update/")
@@ -74,23 +72,49 @@ func UpdateActorHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteActorHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
-	// Получаем ID актера из URL-адреса
-	urlPath := r.URL.Path
-	idStr := strings.TrimPrefix(urlPath, "/actors/delete/")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid actor ID", http.StatusBadRequest)
-		return
-	}
+    // Извлекаем id из URL
+    parts := strings.Split(r.URL.Path, "/")
+    if len(parts) < 4 {
+        http.Error(w, "Invalid URL", http.StatusBadRequest)
+        return
+    }
 
-	// Удаляем актера из базы данных
-	query := `DELETE FROM actors WHERE id=$1`
-	_, err = db.Exec(query, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+    actorIDStr := parts[len(parts)-1]
+    actorID, err := strconv.Atoi(actorIDStr)
+    if err != nil {
+        http.Error(w, "Invalid actor ID", http.StatusBadRequest)
+        return
+    }
 
-	// Возвращаем статус 204 No Content
-	w.WriteHeader(http.StatusNoContent)
+    // Удаляем актера из базы данных
+    _, err = db.Exec("DELETE FROM actors WHERE id = ?", actorID)
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Error deleting actor: %v", err), http.StatusInternalServerError)
+        return
+    }
+
+    // Отправляем успешный статус
+    w.WriteHeader(http.StatusOK)
+}
+
+func GetActorsHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
+    rows, err := db.Query("SELECT id, name, gender, birth_date FROM actors")
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Error fetching actors: %v", err), http.StatusInternalServerError)
+        return
+    }
+    defer rows.Close()
+
+    var actors []Actor
+    for rows.Next() {
+        var actor Actor
+        if err := rows.Scan(&actor.ID, &actor.Name, &actor.Gender, &actor.Birthdate); err != nil {
+            http.Error(w, fmt.Sprintf("Error scanning actor row: %v", err), http.StatusInternalServerError)
+            return
+        }
+        actors = append(actors, actor)
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(actors)
 }

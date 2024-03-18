@@ -14,15 +14,10 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
-	
-	str := "/actor" + huy
-
-	
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/actor", handlers.ActorHandler)
 
-	mux.HandleFunc("/actor/add", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/actors/add", func(w http.ResponseWriter, r *http.Request) {
 		handlers.AddActorHandler(db, w, r)
 	})
 	mux.HandleFunc("/actors/update/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -32,8 +27,10 @@ func main() {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-	http.HandleFunc("/actors/", func(w http.ResponseWriter, r *http.Request) {
+	// Обработчик для удаления актера
+	http.HandleFunc("/actors/delete/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodDelete {
+			// Здесь вызывайте функцию для удаления актера
 			handlers.DeleteActorHandler(db, w, r)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
